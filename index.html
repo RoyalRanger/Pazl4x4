@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Пазл 4x4: Разгадай шифр!</title>
     <style>
         * {
@@ -20,9 +20,8 @@
             align-items: center;
             padding: 20px;
             color: white;
+            touch-action: manipulation;
         }
-
-        img { display: block; }
 
         .container {
             max-width: 800px;
@@ -115,6 +114,8 @@
             user-select: none;
             border: 2px solid rgba(255, 255, 255, 0.3);
             border-radius: 4px;
+            background-size: cover;
+            background-position: center;
             transition: transform 0.2s ease;
         }
 
@@ -157,17 +158,15 @@
 
         /* Адаптивность */
         @media (max-width: 600px) {
-
-> Mentalist:
-.puzzle-grid {
+            .puzzle-grid {
                 width: 320px;
                 height: 320px;
             }
-            
+           
             h1 {
                 font-size: 2rem;
             }
-            
+           
             .victory-text {
                 font-size: 2rem;
             }
@@ -184,7 +183,7 @@
 <body>
     <div class="container">
         <h1>Пазл 4x4: Разгадай шифр!</h1>
-        
+       
         <div class="upload-section">
             <input type="file" id="fileInput" class="file-input" accept="image/jpeg,image/png,image/webp">
             <label for="fileInput" class="upload-btn">Выбрать изображение</label>
@@ -214,8 +213,8 @@
         let originalImage = null;
         let puzzlePieces = [];
         let currentPuzzleState = [];
-        const GRID_SIZE = 4; // Изменено с 3x3 на 4x4
-        const TOTAL_PIECES = GRID_SIZE * GRID_SIZE; // 16 частей
+        const GRID_SIZE = 4;
+        const TOTAL_PIECES = GRID_SIZE * GRID_SIZE;
 
         // Инициализация при загрузке страницы
         document.addEventListener('DOMContentLoaded', () => {
@@ -244,59 +243,43 @@
 
         // Создание пазла из изображения
         function createPuzzle(imageSrc) {
-            // Создаем изображение для получения размеров
-            originalImage = new Image();
-            originalImage.onload = function() {
-                // Отображаем исходное изображение
-                document.getElementById('originalImage').src = imageSrc;
-                document.getElementById('originalImageContainer').style.display = 'block';
-                
-                // Скрываем сообщение победы (если оно было показано ранее)
-                document.getElementById('victoryMessage').style.display = 'none';
-                
-                // Создаем пазл
-                generatePuzzlePieces();
-                createPuzzleGrid();
-                shufflePuzzle();
-                renderPuzzle();
-                
-                // Показываем игровую область
-                document.getElementById('puzzleContainer').style.display = 'block';
+            // Отображаем исходное изображение
+            document.getElementById('originalImage').src = imageSrc;
+            document.getElementById('originalImageContainer').style.display = 'block';
+            document.getElementById('victoryMessage').style.display = 'none';
+
+            // Создаем временное изображение для нарезки
+            const tempImg = new Image();
+            tempImg.crossOrigin = "anonymous";
+            tempImg.onload = function() {
+                generateAndRenderPuzzle(imageSrc, tempImg);
             };
-            originalImage.src = imageSrc;
+            tempImg.src = imageSrc;
         }
 
-        // Генерация фрагментов пазла
-        function generatePuzzlePieces() {
+        // Полностью синхронная генерация и отрисовка
+        function generateAndRenderPuzzle(imageSrc, tempImg) {
             puzzlePieces = [];
-            
-            // Рассчитываем размеры фрагментов для 4x4 сетки
-            const pieceWidth = Math.floor(originalImage.width / GRID_SIZE);
-            const pieceHeight = Math.floor(originalImage.height / GRID_SIZE);
-            
-            // Создаем canvas для нарезки изображения
-            const canvas = document.createElement('canvas');
+            const pieceWidth = Math.floor(tempImg.width / GRID_SIZE);
+            const pieceHeight = Math.floor(tempImg.height / GRID_SIZE);
 
-> Mentalist:
-const ctx = canvas.getContext('2d');
-            
-            // Генерируем 16 фрагментов (4x4)
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+
+            // Генерируем 16 фрагментов
             for (let row = 0; row < GRID_SIZE; row++) {
                 for (let col = 0; col < GRID_SIZE; col++) {
-                    // Устанавливаем размеры canvas для текущего фрагмента
                     canvas.width = pieceWidth;
                     canvas.height = pieceHeight;
-                    
-                    // Вырезаем фрагмент из исходного изображения
+
                     ctx.drawImage(
-                        originalImage,
-                        col * pieceWidth, row * pieceHeight, // исходные координаты
-                        pieceWidth, pieceHeight,             // исходные размеры
-                        0, 0,                                // целевые координаты
-                        pieceWidth, pieceHeight              // целевые размеры
+                        tempImg,
+                        col * pieceWidth, row * pieceHeight,
+                        pieceWidth, pieceHeight,
+                        0, 0,
+                        pieceWidth, pieceHeight
                     );
-                    
-                    // Сохраняем фрагмент с его правильным ID (0-15)
+
                     const pieceId = row * GRID_SIZE + col;
                     puzzlePieces.push({
                         id: pieceId,
@@ -306,14 +289,21 @@ const ctx = canvas.getContext('2d');
                     });
                 }
             }
+
+            // Теперь все фрагменты готовы — создаём сетку и рендерим
+            createPuzzleGrid();
+            shufflePuzzle();
+            renderPuzzle();
+
+            // Показываем игровую область
+            document.getElementById('puzzleContainer').style.display = 'block';
         }
 
         // Создание сетки пазла
         function createPuzzleGrid() {
             const puzzleGrid = document.getElementById('puzzleGrid');
             puzzleGrid.innerHTML = '';
-            
-            // Создаем 16 ячеек для пазла (4x4)
+           
             for (let i = 0; i < TOTAL_PIECES; i++) {
                 const cell = document.createElement('div');
                 cell.className = 'puzzle-cell';
@@ -324,49 +314,46 @@ const ctx = canvas.getContext('2d');
 
         // Перемешивание пазла
         function shufflePuzzle() {
-            // Создаем копию массива фрагментов
             currentPuzzleState = [...puzzlePieces];
-            
-            // Алгоритм Фишера-Йейтса для перемешивания
             for (let i = currentPuzzleState.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [currentPuzzleState[i], currentPuzzleState[j]] = [currentPuzzleState[j], currentPuzzleState[i]];
             }
         }
 
-        // Отображение пазла
+        // Отображение пазла — используем div с background-image
         function renderPuzzle() {
             const puzzleGrid = document.getElementById('puzzleGrid');
-            
-            // Очищаем сетку
             puzzleGrid.innerHTML = '';
-            
-            // Создаем ячейки и добавляем в них фрагменты согласно текущему состоянию
+           
             for (let i = 0; i < TOTAL_PIECES; i++) {
                 const cell = document.createElement('div');
                 cell.className = 'puzzle-cell';
                 cell.dataset.index = i;
-                
+               
                 if (i < currentPuzzleState.length && currentPuzzleState[i]) {
                     const piece = currentPuzzleState[i];
-                    const img = document.createElement('img');
-                    img.src = piece.dataUrl;
-                    img.className = 'puzzle-piece';
-                    img.draggable = true;
-                    img.dataset.pieceId = piece.id;
-                    img.dataset.pieceIndex = i; // Сохраняем текущую позицию
-                    
-                    // Добавляем обработчики drag-and-drop
-                    img.addEventListener('dragstart', handleDragStart);
-                    img.addEventListener('dragend', handleDragEnd);
-                    
-                    cell.appendChild(img);
+                    const div = document.createElement('div');
+                    div.className = 'puzzle-piece';
+                    div.style.backgroundImage = `url(${piece.dataUrl})`;
+                    div.dataset.pieceId = piece.id;
+                    div.dataset.pieceIndex = i;
+                   
+                    // КРИТИЧЕСКИ: отключаем контекстное меню!
+                    div.addEventListener('contextmenu', e => e.preventDefault());
+                   
+                    // Drag-and-drop
+                    div.setAttribute('draggable', true);
+                    div.addEventListener('dragstart', handleDragStart);
+                    div.addEventListener('dragend', handleDragEnd);
+                   
+                    cell.appendChild(div);
                 }
-                
+               
                 puzzleGrid.appendChild(cell);
             }
-            
-            // Добавляем обработчики drop для ячеек
+           
+            // Добавляем обработчики drop
             const cells = document.querySelectorAll('.puzzle-cell');
             cells.forEach(cell => {
                 cell.addEventListener('dragover', handleDragOver);
@@ -375,10 +362,7 @@ const ctx = canvas.getContext('2d');
         }
 
         // Обработчики drag-and-drop
-        let draggedPiece = n
-
-> Mentalist:
-ull;
+        let draggedPiece = null;
         let draggedFromIndex = -1;
 
         function handleDragStart(e) {
@@ -402,58 +386,37 @@ ull;
         function handleDrop(e) {
             e.preventDefault();
             if (!draggedPiece) return;
-            
+           
             const targetCell = e.target.closest('.puzzle-cell');
             if (!targetCell) return;
-            
+           
             const targetIndex = parseInt(targetCell.dataset.index);
-            
-            // Обмениваем фрагменты между исходной и целевой позициями
+           
             if (draggedFromIndex !== targetIndex) {
-                // Меняем местами в массиве состояния
-                [currentPuzzleState[draggedFromIndex], currentPuzzleState[targetIndex]] = 
+                [currentPuzzleState[draggedFromIndex], currentPuzzleState[targetIndex]] =
                 [currentPuzzleState[targetIndex], currentPuzzleState[draggedFromIndex]];
-                
-                // Обновляем индексы в данных фрагментов
-                if (currentPuzzleState[draggedFromIndex]) {
-                    currentPuzzleState[draggedFromIndex].index = draggedFromIndex;
-                }
-                if (currentPuzzleState[targetIndex]) {
-                    currentPuzzleState[targetIndex].index = targetIndex;
-                }
-                
-                // Перерисовываем пазл
-                renderPuzzle();
-                
-                // Проверяем победу
+               
+                renderPuzzle(); // Перерисовываем
                 checkVictory();
             }
         }
 
         // Проверка победы
         function checkVictory() {
-            // Проверяем, что все фрагменты на своих местах
-            // Правильный порядок: фрагмент с id=0 в позиции 0, id=1 в позиции 1, ..., id=15 в позиции 15
             for (let i = 0; i < TOTAL_PIECES; i++) {
                 if (!currentPuzzleState[i] || currentPuzzleState[i].id !== i) {
                     return false;
                 }
             }
-            
-            // Если дошли до сюда - пазл собран!
             handleVictory();
             return true;
         }
 
         // Обработка победы
         function handleVictory() {
-            // Скрываем исходное изображение
             document.getElementById('originalImageContainer').style.display = 'none';
-            
-            // Показываем сообщение победы
             document.getElementById('victoryMessage').style.display = 'block';
-            
-            // Добавляем анимацию победы
+           
             const victoryText = document.querySelector('.victory-text');
             victoryText.style.animation = 'none';
             setTimeout(() => {
